@@ -63,7 +63,7 @@ namespace TeambaseInsurance.Service
 
                 case PricingModel.GenderAgeRated:
                     decimal basePremium = age * GetRatePerAgeGroup(age);
-                    if (employeeDto.Gender.ToLower() == "female" && age >= 18)
+                    if (employeeDto.Gender.ToUpper() == GenderConstants.Female && age >= 18)
                         basePremium *= 1.5m;
                     return basePremium;
 
