@@ -6,7 +6,7 @@ using TeambaseInsurance.ServiceContracts;
 
 namespace TeambaseInsurance.Presentation.Controllers
 {
-    [Route("api/v1/premium")]
+    [Route("api/v1/premium-calculator")]
     [ApiController]
     public class PremiumController : ControllerBase
     {
@@ -17,7 +17,7 @@ namespace TeambaseInsurance.Presentation.Controllers
             _serviceManager = service;
         }
 
-        [HttpGet("calculate")]
+        [HttpGet("get-premium")]
         public async Task<IActionResult> GetPremium([FromQuery] PremiumRequestDto request)
         {
             var result = await _serviceManager.PremiumCalculatorService.GetPremiumAsync(request);

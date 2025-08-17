@@ -1,6 +1,8 @@
 ﻿using Ardalis.Result;
 using AutoMapper;
+using Microsoft.Extensions.Options;
 using Shared;
+using Shared.Configuration;
 using Shared.DTOs;
 using TeambaseInsurance.RepositoryContracts;
 using TeambaseInsurance.ServiceContracts;
@@ -11,11 +13,13 @@ namespace TeambaseInsurance.Service
     {
         private readonly IRepositoryManager _repositoryManager;
         private readonly IMapper _mapper;
+        private readonly List<AgeRateConfigItem> _ageRates;
 
-        public PremiumCalculatorService(IRepositoryManager repositoryManager, IMapper mapper)
+        public PremiumCalculatorService(IRepositoryManager repositoryManager, IMapper mapper, IOptions<List<AgeRateConfigItem>> ageRateOptions)
         {
             _repositoryManager = repositoryManager;
-            _mapper = mapper;
+            _mapper = mapper; 
+            _ageRates = ageRateOptions.Value;
         }
 
         public async Task<Result<PremiumResponseDto>> GetPremiumAsync(PremiumRequestDto request)
@@ -27,7 +31,7 @@ namespace TeambaseInsurance.Service
             var employeeDto = _mapper.Map<EmployeeDto>(employee);
 
             Enum.TryParse<PricingModel>(request.PricingModel, true, out var pricingModel);
-            var fullPremium = CalculateFullPremium(employeeDto, pricingModel);
+            var fullPremium = CalculatePremium(employeeDto, pricingModel);
 
             Enum.TryParse<ProrationMethod>(request.ProrationMethod, true, out var prorationMethod);
             var proratedPremium = ApplyProration(fullPremium, employeeDto, prorationMethod);
@@ -44,13 +48,14 @@ namespace TeambaseInsurance.Service
             });
         }
 
-        public decimal CalculateFullPremium(EmployeeDto employeeDto, PricingModel pricingModel)
+        public decimal CalculatePremium(EmployeeDto employeeDto, PricingModel pricingModel)
         {
             int age = GetAge(employeeDto.DateOfBirth);
 
             switch (pricingModel)
             {
-                case PricingModel.FlatRate:
+
+                case PricingModel.FlatRate: //The full premium is $1000 USD. 
                     return 1000m;
 
                 case PricingModel.AgeRated:
@@ -85,7 +90,11 @@ namespace TeambaseInsurance.Service
             }
         }
 
-        private int GetRatePerAgeGroup(int age) => ((age / 10) + 1) * 100;
+        private int GetRatePerAgeGroup(int age) 
+        {
+            var config = _ageRates.FirstOrDefault(x => age >= x.MinAge && age <= x.MaxAge);
+            return config?.Rate ?? 100;
+        }
 
         private int GetAge(DateTime birthDate)
         {

@@ -3,6 +3,7 @@ using TeambaseInsurance.Extensions;
 using TeambaseInsurance.Presentation.ActionFilters;
 using TeambaseInsurance.Service.Mapping;
 using TeambaseInsurance.Repository;
+using Shared.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,11 @@ builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<EmployeeMappingProfile>();
 });
+
+
+builder.Services.Configure<List<AgeRateConfigItem>>(
+    builder.Configuration.GetSection("AgeRateConfig"));
+
 
 builder.Services.ConfigureDbContext(builder.Configuration);
 builder.Services.ConfigureServiceManager();

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Options;
+using Shared.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,10 +18,10 @@ namespace TeambaseInsurance.Service
         public IEmployeeService EmployeeService => _employeeService.Value;
         public IPremiumCalculatorService PremiumCalculatorService => _premiumCalculatorService.Value;
         
-        public ServiceManager(IRepositoryManager repository, AutoMapper.IMapper mapper)
+        public ServiceManager(IRepositoryManager repository, AutoMapper.IMapper mapper, IOptions<List<AgeRateConfigItem>> ageRateOptions)
         {
             _employeeService = new Lazy<IEmployeeService>(() => new EmployeeService(repository, mapper));
-            _premiumCalculatorService = new Lazy<IPremiumCalculatorService>(() => new PremiumCalculatorService(repository, mapper));
+            _premiumCalculatorService = new Lazy<IPremiumCalculatorService>(() => new PremiumCalculatorService(repository, mapper, ageRateOptions));
         }
     }
 }
