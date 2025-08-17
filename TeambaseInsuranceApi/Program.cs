@@ -25,46 +25,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Test database connection and apply migrations
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<RepositoryContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    
-    try
-    {
-        // Test database connection
-        logger.LogInformation("Testing database connection...");
-        var canConnect = context.Database.CanConnect();
-        if (canConnect)
-        {
-            logger.LogInformation("Database connection successful.");
-        }
-        else
-        {
-            logger.LogWarning("Database connection failed.");
-        }
-        
-        // Apply migrations
-        logger.LogInformation("Starting database migration...");
-        context.Database.Migrate();
-        logger.LogInformation("Database migration completed successfully.");
-    }
-    catch (Exception ex)
-    {
-        logger.LogWarning("Migration failed, attempting to create database: {Message}", ex.Message);
-        try
-        {
-            context.Database.EnsureCreated();
-            logger.LogInformation("Database created successfully.");
-        }
-        catch (Exception createEx)
-        {
-            logger.LogError(createEx, "Failed to create database: {Message}", createEx.Message);
-            throw;
-        }
-    }
-}
+ServiceExtensions.ApplyMigrations(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -72,6 +33,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseMiddleware<ExceptionMiddlewareExtensions>();
 
 app.UseHttpsRedirection();
 

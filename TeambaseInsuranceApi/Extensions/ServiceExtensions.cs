@@ -34,7 +34,7 @@ namespace TeambaseInsurance.Extensions
                         sqlOptions.CommandTimeout(60);
                         sqlOptions.MigrationsAssembly("TeambaseInsurance");
                     });
-                
+
                 // Enable detailed error messages in development
                 if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
                 {
@@ -47,6 +47,47 @@ namespace TeambaseInsurance.Extensions
         public static void ConfigureServices(this IServiceCollection services)
         {
             services.AddScoped<IPremiumCalculatorService, PremiumCalculatorService>();
+        }
+
+        public static void ApplyMigrations(this WebApplication app)
+        {
+            using (var scope = app.Services.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<RepositoryContext>();
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+                try
+                {
+                    logger.LogInformation("Testing database connection...");
+                    var canConnect = context.Database.CanConnect();
+                    if (canConnect)
+                    {
+                        logger.LogInformation("Database connection successful.");
+                    }
+                    else
+                    {
+                        logger.LogWarning("Database connection failed.");
+                    }
+
+                    logger.LogInformation("Starting database migration...");
+                    context.Database.Migrate();
+                    logger.LogInformation("Database migration completed successfully.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning("Migration failed, attempting to create database: {Message}", ex.Message);
+                    try
+                    {
+                        context.Database.EnsureCreated();
+                        logger.LogInformation("Database created successfully.");
+                    }
+                    catch (Exception createEx)
+                    {
+                        logger.LogError(createEx, "Failed to create database: {Message}", createEx.Message);
+                        throw;
+                    }
+                }
+            }
         }
     }
 }

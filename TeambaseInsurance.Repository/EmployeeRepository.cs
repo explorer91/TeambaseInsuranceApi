@@ -22,16 +22,8 @@ namespace TeambaseInsurance.Repository
 
         public async Task<IEnumerable<Employee>> GetAllEmployeesAsync()
         {
-            try
-            {
-                return await FindAll(trackChanges: false).ToListAsync();
-
-            }
-            catch (Exception ex)
-            {
-
-                throw;
-            }        }
+            return await FindAll(trackChanges: false).ToListAsync();
+        }
 
         public async Task<Employee> GetEmployeeByIdAsync(int id)
         {

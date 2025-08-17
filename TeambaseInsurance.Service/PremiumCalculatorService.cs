@@ -1,6 +1,5 @@
 ﻿using Ardalis.Result;
 using AutoMapper;
-using Entities.Models;
 using Shared;
 using Shared.DTOs;
 using TeambaseInsurance.RepositoryContracts;
@@ -21,37 +20,28 @@ namespace TeambaseInsurance.Service
 
         public async Task<Result<PremiumResponseDto>> GetPremiumAsync(PremiumRequestDto request)
         {
-            try
+            var employee = await _repositoryManager.EmployeeRepository.GetEmployeeByIdAsync(request.EmployeeId);
+            if (employee == null)
+                return Result<PremiumResponseDto>.NotFound();
+
+            var employeeDto = _mapper.Map<EmployeeDto>(employee);
+
+            Enum.TryParse<PricingModel>(request.PricingModel, true, out var pricingModel);
+            var fullPremium = CalculateFullPremium(employeeDto, pricingModel);
+
+            Enum.TryParse<ProrationMethod>(request.ProrationMethod, true, out var prorationMethod);
+            var proratedPremium = ApplyProration(fullPremium, employeeDto, prorationMethod);
+
+            return Result<PremiumResponseDto>.Success(new PremiumResponseDto
             {
-                var pricingModel = ParsePricingModel(request.PricingModel);
-                var prorationMethod = ParseProrationMethod(request.ProrationMethod);
-
-                var employee = await _repositoryManager.EmployeeRepository.GetEmployeeByIdAsync(request.EmployeeId);
-                if (employee == null)
-                    return Result<PremiumResponseDto>.NotFound();
-
-                var employeeDto = _mapper.Map<EmployeeDto>(employee);
-
-                var fullPremium = CalculateFullPremium(employeeDto, pricingModel);
-
-                var proratedPremium = ApplyProration(fullPremium, employeeDto, prorationMethod);
-                 
-
-                return Result<PremiumResponseDto>.Success(new PremiumResponseDto
-                {
-                    EmployeeId = employee.Id,
-                    EmployeeName = $"{employee.FirstName} {employee.LastName}",
-                    FullPremium = fullPremium,
-                    ProratedPremium = proratedPremium,
-                    PricingModel = request.PricingModel,
-                    ProrationMethod = request.ProrationMethod,
-                    CalculationDate = DateTime.UtcNow
-                });
-            }
-            catch (Exception ex)
-            {
-                return Result<PremiumResponseDto>.Error($"An error occurred while calculating premium: {ex.Message}");
-            }
+                EmployeeId = employee.Id,
+                EmployeeName = $"{employee.FirstName} {employee.LastName}",
+                FullPremium = fullPremium,
+                ProratedPremium = proratedPremium,
+                PricingModel = request.PricingModel,
+                ProrationMethod = request.ProrationMethod,
+                CalculationDate = DateTime.UtcNow
+            });
         }
 
         public decimal CalculateFullPremium(EmployeeDto employeeDto, PricingModel pricingModel)
@@ -68,7 +58,7 @@ namespace TeambaseInsurance.Service
 
                 case PricingModel.GenderAgeRated:
                     decimal basePremium = age * GetRatePerAgeGroup(age);
-                    if (employeeDto.Gender.Equals("Female", StringComparison.OrdinalIgnoreCase) && age >= 18)
+                    if (employeeDto.Gender.ToLower() == "female" && age >= 18)
                         basePremium *= 1.5m;
                     return basePremium;
 
@@ -95,39 +85,8 @@ namespace TeambaseInsurance.Service
             }
         }
 
-        private Result<PremiumResponseDto> ValidatePremiumRequest(PremiumRequestDto request)
-        {
-            if (request == null)
-                return Result<PremiumResponseDto>.Error("Request cannot be null");
-
-            if (request.EmployeeId <= 0)
-                return Result<PremiumResponseDto>.Error("EmployeeId must be greater than 0");
-
-            if (string.IsNullOrWhiteSpace(request.PricingModel))
-                return Result<PremiumResponseDto>.Error("PricingModel is required");
-
-            if (string.IsNullOrWhiteSpace(request.ProrationMethod))
-                return Result<PremiumResponseDto>.Error("ProrationMethod is required");
-
-            return Result<PremiumResponseDto>.Success(null!);
-        }
-
-        private PricingModel ParsePricingModel(string pricingModel)
-        {
-            if (!Enum.TryParse<PricingModel>(pricingModel, true, out var result))
-                throw new ArgumentException($"Invalid PricingModel: {pricingModel}");
-            return result;
-        }
-
-        private ProrationMethod ParseProrationMethod(string prorationMethod)
-        {
-            if (!Enum.TryParse<ProrationMethod>(prorationMethod, true, out var result))
-                throw new ArgumentException($"Invalid ProrationMethod: {prorationMethod}");
-            return result;
-        }
-
         private int GetRatePerAgeGroup(int age) => ((age / 10) + 1) * 100;
-        
+
         private int GetAge(DateTime birthDate)
         {
             int age = DateTime.Today.Year - birthDate.Year;
