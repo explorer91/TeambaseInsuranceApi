@@ -18,7 +18,7 @@ namespace TeambaseInsurance.Service
         public PremiumCalculatorService(IRepositoryManager repositoryManager, IMapper mapper, IOptions<List<AgeRateConfigItem>> ageRateOptions)
         {
             _repositoryManager = repositoryManager;
-            _mapper = mapper; 
+            _mapper = mapper;
             _ageRates = ageRateOptions.Value;
         }
 
@@ -90,16 +90,20 @@ namespace TeambaseInsurance.Service
             }
         }
 
-        private int GetRatePerAgeGroup(int age) 
+        private int GetRatePerAgeGroup(int age)
         {
             var config = _ageRates.FirstOrDefault(x => age >= x.MinAge && age <= x.MaxAge);
             return config?.Rate ?? 100;
         }
 
-        private int GetAge(DateTime birthDate)
+        private int GetAge(DateOnly birthDate)
         {
-            int age = DateTime.Today.Year - birthDate.Year;
-            if (DateTime.Today < birthDate.AddYears(age)) age--;
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            int age = today.Year - birthDate.Year;
+
+            var birthdayThisYear = new DateOnly(today.Year, birthDate.Month, birthDate.Day);
+            if (today < birthdayThisYear) age--;
+
             return age;
         }
     }

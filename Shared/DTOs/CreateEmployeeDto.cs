@@ -9,7 +9,7 @@ namespace Shared.DTOs
         [Required]
         public string LastName { get; set; } = null!;
         [Required]
-        public DateTime DateOfBirth { get; set; }
+        public DateOnly DateOfBirth { get; set; }
         [Required]
         public string Gender { get; set; } = null!;
         [Required]
